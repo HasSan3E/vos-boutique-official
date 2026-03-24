@@ -5,6 +5,10 @@
 :root {
   --font-playfair: 'Playfair Display', serif;
   --font-lato: 'Lato', sans-serif;
+  --vos-brown: #5c4033;
+  /* Deep Boutique Brown */
+  --vos-tan: #f5f2f0;
+  /* Soft Paper/Linen Background */
 }
 
 
@@ -22,12 +26,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+
 
 body {
   background: var(--background);
