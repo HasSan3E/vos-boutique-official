@@ -119,7 +119,7 @@ export default function ProductDetailPage() {
       setReviews((prev) => [data[0], ...prev]);
       setReviewForm({ name: "", email: "", comment: "", rating: 5 });
       alert("Your testimonial has been archived.");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Submission Error:", err.message || err);
     } finally {
       setIsSubmitting(false);
