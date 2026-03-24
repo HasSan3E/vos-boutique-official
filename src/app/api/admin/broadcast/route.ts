@@ -10,9 +10,13 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-export async function POST() {
+export async function POST(req: Request) {
+  // Add 'req: Request' here
   try {
-    // USE supabaseAdmin HERE instead of the standard client
+    // 1. ADD THIS LINE: This extracts the product info sent from your Admin Dashboard
+    const { product } = await req.json();
+
+    // Now 'product' exists, so the rest of your code will work!
     const { data: subscribers, error: dbError } = await supabaseAdmin
       .from("subscribers")
       .select("email");
