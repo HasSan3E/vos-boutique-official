@@ -382,7 +382,7 @@ function ProductForm({ existingProduct, onSuccess, onCancel }: any) {
     setLoading(true);
     try {
       let mainUrl = pData.image_url;
-      let gallUrls = pData.images || [];
+      let gallUrls: string[] = pData.images || [];
 
       if (featuredFile) mainUrl = await uploadFile(featuredFile);
       if (galleryFiles.length > 0) {
