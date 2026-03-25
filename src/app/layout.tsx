@@ -4,6 +4,7 @@ import { CartProvider } from "@/context/CartContext";
 import CartDrawer from "@/components/CartDrawer";
 import Header from "@/components/Header"; // Import the new Header
 import Footer from "@/components/Footer"; // Import the new Footer
+import WhatsAppChat from "@/components/WhatsAppChat";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -36,7 +37,7 @@ export default function RootLayout({
           <Header />
 
           {children}
-
+          <WhatsAppChat />
           {/* Footer stays at the bottom of every page */}
           <Footer />
 
