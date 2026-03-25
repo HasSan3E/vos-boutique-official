@@ -53,7 +53,49 @@ export default function AdminDashboard() {
     if (data) setComments(data);
   }
 
-  // --- BROADCAST LOGIC (Single Product) ---
+  // --- ACTIONS (FIXED BUTTON LOGIC) ---
+  const updateOrderStatus = async (id: string, status: string) => {
+    const { error } = await supabase
+      .from("orders")
+      .update({ status })
+      .eq("id", id);
+    if (!error) {
+      setOrders(orders.map((o) => (o.id === id ? { ...o, status } : o)));
+    } else {
+      alert("Error: " + error.message);
+    }
+  };
+
+  const deleteOrder = async (id: string) => {
+    if (confirm("Archive this order permanently?")) {
+      const { error } = await supabase.from("orders").delete().eq("id", id);
+      if (!error) {
+        setOrders(orders.filter((o) => o.id !== id));
+      } else {
+        alert("Error: " + error.message);
+      }
+    }
+  };
+
+  const deleteComment = async (id: string) => {
+    if (confirm("Remove this comment?")) {
+      await supabase.from("comments").delete().eq("id", id);
+      setComments(comments.filter((c) => c.id !== id));
+    }
+  };
+
+  const deleteProduct = async (id: string) => {
+    if (confirm("Delete this scent from the vault?")) {
+      const { error } = await supabase.from("products").delete().eq("id", id);
+      if (!error) {
+        setProducts(products.filter((p) => p.id !== id));
+      } else {
+        alert("Error: " + error.message);
+      }
+    }
+  };
+
+  // --- BROADCAST LOGIC (RESTORED) ---
   const handleBroadcast = async (product: any) => {
     const confirmSend = confirm(
       `Send promotional email for "${product.name}" to the entire Sovereign Circle?`,
@@ -67,68 +109,21 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ product }),
       });
-
-      if (res.ok) {
-        alert("The Circle has been notified. 🏛️");
-      } else {
-        const errData = await res.json();
-        alert("Broadcast Failed: " + (errData.error || "Unknown Error"));
-      }
-    } catch (err) {
-      alert("System Error: Could not reach broadcast server.");
+      if (res.ok) alert("The Circle has been notified. 🏛️");
     } finally {
       setBroadcastingId(null);
     }
   };
 
-  // --- MONTHLY DIGEST LOGIC ---
   const handleMonthlyDigest = async () => {
     if (!confirm("Dispatch the Monthly Edit digest to all subscribers?"))
       return;
-
     setSendingDigest(true);
     try {
-      const res = await fetch("/api/admin/monthly", {
-        method: "POST",
-      });
-
-      if (res.ok) {
-        alert("Monthly Digest dispatched to the Circle! 🏛️");
-      } else {
-        const errData = await res.json();
-        alert("Digest Failed: " + (errData.error || "Unknown Error"));
-      }
-    } catch (err) {
-      alert("System Error: Could not reach broadcast server.");
+      const res = await fetch("/api/admin/monthly", { method: "POST" });
+      if (res.ok) alert("Monthly Digest dispatched! 🏛️");
     } finally {
       setSendingDigest(false);
-    }
-  };
-
-  // --- ACTIONS ---
-  const updateOrderStatus = async (id: string, status: string) => {
-    await supabase.from("orders").update({ status }).eq("id", id);
-    fetchOrders();
-  };
-
-  const deleteOrder = async (id: string) => {
-    if (confirm("Archive this order permanently?")) {
-      await supabase.from("orders").delete().eq("id", id);
-      fetchOrders();
-    }
-  };
-
-  const deleteComment = async (id: string) => {
-    if (confirm("Remove this comment from the website?")) {
-      await supabase.from("comments").delete().eq("id", id);
-      fetchComments();
-    }
-  };
-
-  const deleteProduct = async (id: string) => {
-    if (confirm("Delete this scent from the vault?")) {
-      await supabase.from("products").delete().eq("id", id);
-      fetchProducts();
     }
   };
 
@@ -141,7 +136,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-black font-sans pb-20">
-      {/* HEADER */}
+      {/* HEADER (RESTORED MONTHLY DIGEST) */}
       <nav className="bg-white border-b border-stone-200 px-8 py-6 sticky top-0 z-50 flex justify-between items-center shadow-sm">
         <div>
           <h1 className="font-serif text-2xl tracking-widest text-[#5c4033] uppercase">
@@ -155,11 +150,7 @@ export default function AdminDashboard() {
           <button
             onClick={handleMonthlyDigest}
             disabled={sendingDigest}
-            className={`text-[9px] font-bold border px-4 py-2 transition-all uppercase tracking-widest ${
-              sendingDigest
-                ? "text-stone-300 border-stone-200 cursor-wait"
-                : "text-[#d4b996] border-[#d4b996] hover:bg-[#d4b996] hover:text-white"
-            }`}
+            className={`text-[9px] font-bold border px-4 py-2 transition-all uppercase tracking-widest ${sendingDigest ? "text-stone-300 border-stone-200 cursor-wait" : "text-[#d4b996] border-[#d4b996] hover:bg-[#d4b996] hover:text-white"}`}
           >
             {sendingDigest ? "Dispatching..." : "Monthly Digest"}
           </button>
@@ -168,7 +159,7 @@ export default function AdminDashboard() {
               await supabase.auth.signOut();
               router.push("/");
             }}
-            className="text-[9px] font-bold text-red-700 border border-red-200 px-4 py-2 hover:bg-red-50 transition-all uppercase tracking-widest"
+            className="text-[9px] font-bold text-red-700 border border-red-200 px-4 py-2 hover:bg-red-50 uppercase tracking-widest"
           >
             Logout
           </button>
@@ -177,7 +168,7 @@ export default function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto p-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* LEFT COLUMN: PRODUCT UPLOAD */}
+          {/* PRODUCT FORM */}
           <div className="lg:col-span-1">
             <h2 className="font-serif text-xl text-[#5c4033] mb-6 uppercase tracking-widest border-b border-stone-100 pb-2">
               Publish Scent
@@ -192,9 +183,8 @@ export default function AdminDashboard() {
             />
           </div>
 
-          {/* RIGHT COLUMN: ORDERS & MODERATION */}
           <div className="lg:col-span-2 space-y-16">
-            {/* ORDERS SECTION */}
+            {/* ORDER LEDGER */}
             <section>
               <h2 className="font-serif text-xl text-[#5c4033] mb-6 uppercase tracking-widest border-b border-stone-100 pb-2">
                 Order Ledger
@@ -205,7 +195,7 @@ export default function AdminDashboard() {
                     key={order.id}
                     className="bg-white border border-stone-200 p-6 shadow-sm flex justify-between items-start hover:shadow-md transition-shadow"
                   >
-                    <div className="space-y-1">
+                    <div className="space-y-1 max-w-[70%]">
                       <div className="flex items-center gap-3">
                         <span
                           className={`text-[9px] font-bold px-2 py-0.5 uppercase tracking-widest ${order.status === "Completed" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}
@@ -213,14 +203,19 @@ export default function AdminDashboard() {
                           {order.status || "Processing"}
                         </span>
                         <h4 className="font-serif text-lg">
-                          {order.customer_name}
+                          Order #{order.id.toString().slice(0, 8).toUpperCase()}{" "}
+                          — {order.customer_name}
                         </h4>
                       </div>
-                      <p className="text-xs text-stone-500 tracking-wide uppercase">
+                      <p className="text-xs text-stone-500 uppercase">
                         {order.phone} — {order.city}
                       </p>
-                      <p className="text-sm italic text-stone-600">
-                        Items: {order.product_name}
+                      <p className="text-[11px] text-[#5c4033] font-medium bg-stone-50 p-2 rounded border border-stone-100 mt-2">
+                        📍 {order.address || "Address Missing"}
+                      </p>
+                      <p className="text-sm italic text-stone-600 mt-2">
+                        Scent:{" "}
+                        <span className="font-bold">{order.product_name}</span>
                       </p>
                     </div>
                     <div className="text-right space-y-3">
@@ -232,13 +227,13 @@ export default function AdminDashboard() {
                           onClick={() =>
                             updateOrderStatus(order.id, "Completed")
                           }
-                          className="text-[10px] font-bold text-green-600 hover:underline uppercase tracking-tighter"
+                          className="text-[10px] font-bold text-green-600 hover:underline uppercase"
                         >
-                          Mark Complete
+                          Complete
                         </button>
                         <button
                           onClick={() => deleteOrder(order.id)}
-                          className="text-[10px] font-bold text-red-400 hover:text-red-700 uppercase tracking-tighter"
+                          className="text-[10px] font-bold text-red-400 hover:text-red-700 uppercase"
                         >
                           Delete
                         </button>
@@ -249,7 +244,7 @@ export default function AdminDashboard() {
               </div>
             </section>
 
-            {/* LIVE INVENTORY + BROADCAST */}
+            {/* LIVE INVENTORY (RESTORED SECTION) */}
             <section>
               <h2 className="font-serif text-xl text-[#5c4033] mb-6 uppercase tracking-widest border-b border-stone-100 pb-2">
                 Live Inventory & Circle Broadcast
@@ -258,7 +253,7 @@ export default function AdminDashboard() {
                 {products.map((p) => (
                   <div
                     key={p.id}
-                    className="bg-white border border-stone-200 p-4 flex flex-col justify-between text-center group"
+                    className="bg-white border border-stone-200 p-4 flex flex-col justify-between text-center group shadow-sm hover:shadow-md transition-shadow"
                   >
                     <div>
                       <img
@@ -272,32 +267,26 @@ export default function AdminDashboard() {
                         Rs. {p.price}
                       </p>
                     </div>
-
                     <div className="space-y-2 mt-4">
                       <button
                         onClick={() => handleBroadcast(p)}
                         disabled={broadcastingId === p.id}
-                        className={`w-full py-2 text-[9px] font-bold uppercase tracking-widest transition-all border ${
-                          broadcastingId === p.id
-                            ? "bg-stone-100 text-stone-400 border-stone-100 cursor-not-allowed"
-                            : "bg-[#5c4033] text-white border-[#5c4033] hover:bg-white hover:text-[#5c4033]"
-                        }`}
+                        className={`w-full py-2 text-[9px] font-bold uppercase tracking-widest border ${broadcastingId === p.id ? "bg-stone-100 text-stone-400 border-stone-100 cursor-not-allowed" : "bg-[#5c4033] text-white border-[#5c4033] hover:bg-white hover:text-[#5c4033]"}`}
                       >
                         {broadcastingId === p.id
                           ? "Notifying..."
                           : "Announce to Circle"}
                       </button>
-
                       <div className="flex justify-center gap-4 pt-2 border-t border-stone-50">
                         <button
                           onClick={() => setEditingProduct(p)}
-                          className="text-[9px] font-bold text-stone-400 hover:text-black uppercase tracking-tighter"
+                          className="text-[9px] font-bold text-stone-400 hover:text-black uppercase"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => deleteProduct(p.id)}
-                          className="text-[9px] font-bold text-red-300 hover:text-red-600 uppercase tracking-tighter"
+                          className="text-[9px] font-bold text-red-300 hover:text-red-600 uppercase"
                         >
                           Delete
                         </button>
@@ -308,7 +297,7 @@ export default function AdminDashboard() {
               </div>
             </section>
 
-            {/* COMMENT MODERATOR */}
+            {/* MODERATION */}
             <section>
               <h2 className="font-serif text-xl text-[#5c4033] mb-6 uppercase tracking-widest border-b border-stone-100 pb-2">
                 Global Moderation
@@ -335,11 +324,6 @@ export default function AdminDashboard() {
                     </button>
                   </div>
                 ))}
-                {comments.length === 0 && (
-                  <p className="p-8 text-center text-stone-400 text-sm">
-                    No comments to moderate.
-                  </p>
-                )}
               </div>
             </section>
           </div>
@@ -349,7 +333,7 @@ export default function AdminDashboard() {
   );
 }
 
-// --- SUB-COMPONENT: PRODUCT FORM ---
+// --- SUB-COMPONENT: PRODUCT FORM (RESTORED GALLERY) ---
 function ProductForm({ existingProduct, onSuccess, onCancel }: any) {
   const [pData, setPData] = useState({
     name: "",
@@ -357,7 +341,7 @@ function ProductForm({ existingProduct, onSuccess, onCancel }: any) {
     description: "",
     category: "Men",
     image_url: "",
-    images: [],
+    images: [] as string[],
   });
   const [featuredFile, setFeaturedFile] = useState<File | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
@@ -382,7 +366,7 @@ function ProductForm({ existingProduct, onSuccess, onCancel }: any) {
     setLoading(true);
     try {
       let mainUrl = pData.image_url;
-      let gallUrls: string[] = pData.images || [];
+      let gallUrls = pData.images || [];
 
       if (featuredFile) mainUrl = await uploadFile(featuredFile);
       if (galleryFiles.length > 0) {
@@ -392,21 +376,13 @@ function ProductForm({ existingProduct, onSuccess, onCancel }: any) {
         gallUrls = [...gallUrls, ...uploaded];
       }
 
-      const autoSlug = pData.name
-        .toLowerCase()
-        .trim()
-        .replace(/[^\w\s-]/g, "")
-        .replace(/[\s_-]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-
       const payload = {
         ...pData,
-        slug: autoSlug,
+        price: parseInt(pData.price as any),
         image_url: mainUrl,
         images: gallUrls,
-        price: parseInt(pData.price as any),
+        slug: pData.name.toLowerCase().replace(/\s+/g, "-"),
       };
-
       const { error } = existingProduct?.id
         ? await supabase
             .from("products")
@@ -415,10 +391,8 @@ function ProductForm({ existingProduct, onSuccess, onCancel }: any) {
         : await supabase.from("products").insert([payload]);
 
       if (error) throw error;
-
-      alert("Vault Updated Successfully 🏛️");
+      alert("Vault Updated! 🏛️");
       onSuccess();
-      window.location.reload();
     } catch (err: any) {
       alert("Vault Error: " + err.message);
     } finally {
@@ -434,7 +408,7 @@ function ProductForm({ existingProduct, onSuccess, onCancel }: any) {
       <input
         placeholder="Product Name"
         value={pData.name}
-        className="w-full p-3 border border-stone-100 outline-none focus:border-stone-400 bg-stone-50 text-sm"
+        className="w-full p-3 border border-stone-100 bg-stone-50 text-sm"
         onChange={(e) => setPData({ ...pData, name: e.target.value })}
         required
       />
@@ -442,7 +416,7 @@ function ProductForm({ existingProduct, onSuccess, onCancel }: any) {
         type="number"
         placeholder="Price (PKR)"
         value={pData.price}
-        className="w-full p-3 border border-stone-100 outline-none focus:border-stone-400 bg-stone-50 text-sm"
+        className="w-full p-3 border border-stone-100 bg-stone-50 text-sm"
         onChange={(e) => setPData({ ...pData, price: e.target.value })}
         required
       />
@@ -456,24 +430,22 @@ function ProductForm({ existingProduct, onSuccess, onCancel }: any) {
         <option>Unisex</option>
       </select>
       <textarea
-        placeholder="Scent Notes / Description"
+        placeholder="Scent Notes"
         value={pData.description}
         className="w-full p-3 border border-stone-100 bg-stone-50 h-24 text-sm"
         onChange={(e) => setPData({ ...pData, description: e.target.value })}
       />
-
-      <div className="space-y-2">
+      <div>
         <label className="text-[9px] font-bold uppercase tracking-widest text-stone-400">
           Featured Image
         </label>
         <input
           type="file"
           onChange={(e) => setFeaturedFile(e.target.files?.[0] || null)}
-          className="text-[10px]"
+          className="text-[10px] block mt-1"
         />
       </div>
-
-      <div className="space-y-2">
+      <div>
         <label className="text-[9px] font-bold uppercase tracking-widest text-stone-400">
           Gallery (Up to 4)
         </label>
@@ -483,27 +455,22 @@ function ProductForm({ existingProduct, onSuccess, onCancel }: any) {
           onChange={(e) =>
             setGalleryFiles(Array.from(e.target.files || []).slice(0, 4))
           }
-          className="text-[10px]"
+          className="text-[10px] block mt-1"
         />
       </div>
-
       <div className="flex gap-2 pt-4">
         <button
           type="submit"
           disabled={loading}
           className="flex-1 bg-black text-white py-4 uppercase text-[10px] font-bold tracking-[0.3em]"
         >
-          {loading
-            ? "Syncing..."
-            : existingProduct
-              ? "Update Entry"
-              : "Publish Scent"}
+          {loading ? "Syncing..." : "Publish Scent"}
         </button>
         {existingProduct && (
           <button
             type="button"
             onClick={onCancel}
-            className="bg-stone-100 px-4 text-[10px] uppercase font-bold"
+            className="bg-stone-100 px-4 text-black"
           >
             X
           </button>
