@@ -86,7 +86,7 @@ export default function Header() {
           <a href="/shop" className="hover:text-[#5c4033] transition-colors">
             Shop
           </a>
-          <a href="#" className="hover:text-[#5c4033] transition-colors">
+          <a href="/about" className="hover:text-[#5c4033] transition-colors">
             About
           </a>
         </div>
