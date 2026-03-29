@@ -47,7 +47,7 @@ export default function Footer() {
           <ul className="space-y-6 text-[9px] uppercase tracking-[0.4em] font-semibold">
             <li>
               <a
-                href="#"
+                href="/privacypolicy"
                 className="hover:text-white transition-all duration-300 hover:pl-2"
               >
                 Privacy Policy
@@ -59,6 +59,14 @@ export default function Footer() {
                 className="hover:text-white transition-all duration-300 hover:pl-2"
               >
                 Contact Support
+              </a>
+            </li>
+            <li>
+              <a
+                href="/return&exchange"
+                className="hover:text-white transition-all duration-300 hover:pl-2"
+              >
+                Return Policy
               </a>
             </li>
           </ul>
