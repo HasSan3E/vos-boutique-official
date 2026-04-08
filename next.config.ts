@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Try the most basic toggle available for your version
+  devIndicators: false as any,
+
   images: {
     remotePatterns: [
       {
