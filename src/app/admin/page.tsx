@@ -7,6 +7,7 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [comments, setComments] = useState<any[]>([]);
+  const [claims, setClaims] = useState<any[]>([]); // New State for Claims
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [broadcastingId, setBroadcastingId] = useState<string | null>(null);
@@ -22,11 +23,35 @@ export default function AdminDashboard() {
       if (!session) {
         router.push("/login");
       } else {
-        await Promise.all([fetchOrders(), fetchProducts(), fetchComments()]);
+        // Fetching all data including the new claims
+        await Promise.all([
+          fetchOrders(),
+          fetchProducts(),
+          fetchComments(),
+          fetchClaims(),
+        ]);
         setLoading(false);
       }
     };
     initDashboard();
+
+    // --- REALTIME SUBSCRIPTION FOR CLAIMS ---
+    const claimsChannel = supabase
+      .channel("realtime-claims")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "claims" },
+        (payload) => {
+          // Live update: Adds the new claim to the top of the list
+          setClaims((prev) => [payload.new, ...prev]);
+          // Optional: You can add a sound notification here
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(claimsChannel);
+    };
   }, [router]);
 
   async function fetchOrders() {
@@ -53,7 +78,16 @@ export default function AdminDashboard() {
     if (data) setComments(data);
   }
 
-  // --- ACTIONS (FIXED BUTTON LOGIC) ---
+  // --- NEW: FETCH CLAIMS ---
+  async function fetchClaims() {
+    const { data } = await supabase
+      .from("claims")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) setClaims(data);
+  }
+
+  // --- ACTIONS ---
   const updateOrderStatus = async (id: string, status: string) => {
     const { error } = await supabase
       .from("orders")
@@ -95,7 +129,15 @@ export default function AdminDashboard() {
     }
   };
 
-  // --- BROADCAST LOGIC (RESTORED) ---
+  // --- NEW: DELETE CLAIM ---
+  const deleteClaim = async (id: string) => {
+    if (confirm("Resolve and remove this claim?")) {
+      await supabase.from("claims").delete().eq("id", id);
+      setClaims(claims.filter((c) => c.id !== id));
+    }
+  };
+
+  // --- BROADCAST LOGIC ---
   const handleBroadcast = async (product: any) => {
     const confirmSend = confirm(
       `Send promotional email for "${product.name}" to the entire Sovereign Circle?`,
@@ -136,7 +178,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-black font-sans pb-20">
-      {/* HEADER (RESTORED MONTHLY DIGEST) */}
       <nav className="bg-white border-b border-stone-200 px-8 py-6 sticky top-0 z-50 flex justify-between items-center shadow-sm">
         <div>
           <h1 className="font-serif text-2xl tracking-widest text-[#5c4033] uppercase">
@@ -168,7 +209,6 @@ export default function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto p-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* PRODUCT FORM */}
           <div className="lg:col-span-1">
             <h2 className="font-serif text-xl text-[#5c4033] mb-6 uppercase tracking-widest border-b border-stone-100 pb-2">
               Publish Scent
@@ -184,6 +224,67 @@ export default function AdminDashboard() {
           </div>
 
           <div className="lg:col-span-2 space-y-16">
+            {/* --- NEW: LIVE CLAIMS LEDGER --- */}
+            <section>
+              <h2 className="font-serif text-xl text-[#5c4033] mb-6 uppercase tracking-[0.2em] border-b border-[#d4b996] pb-2 flex justify-between items-center">
+                Return & Exchange Claims
+                <span className="text-[9px] bg-[#d4b996] text-white px-2 py-1 rounded-full animate-pulse">
+                  LIVE
+                </span>
+              </h2>
+              <div className="space-y-4">
+                {claims.length === 0 && (
+                  <p className="text-xs text-stone-400 italic">
+                    No pending claims in the Vault.
+                  </p>
+                )}
+                {claims.map((claim) => (
+                  <div
+                    key={claim.id}
+                    className="bg-white border-l-4 border-[#5c4033] border-y border-r border-stone-200 p-6 shadow-sm hover:shadow-md transition-all"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-serif text-lg text-[#5c4033]">
+                          {claim.name} —{" "}
+                          <span className="text-stone-400">
+                            Order {claim.order_id}
+                          </span>
+                        </h4>
+                        <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mt-1">
+                          Contact: {claim.contact_number}
+                        </p>
+                        <p className="text-sm text-stone-700 mt-4 leading-relaxed font-light bg-stone-50 p-3 italic">
+                          "{claim.complaint}"
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        {claim.attachment_url ? (
+                          <a
+                            href={claim.attachment_url}
+                            target="_blank"
+                            className="inline-block bg-[#d4b996] text-white text-[9px] font-bold px-4 py-2 uppercase tracking-widest hover:bg-black transition-colors"
+                          >
+                            View Evidence 🎞️
+                          </a>
+                        ) : (
+                          <span className="text-[9px] text-stone-300 uppercase">
+                            No File
+                          </span>
+                        )}
+                        <button
+                          onClick={() => deleteClaim(claim.id)}
+                          className="block w-full mt-4 text-[9px] text-red-300 hover:text-red-600 font-bold uppercase tracking-widest"
+                        >
+                          Resolve
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
             {/* ORDER LEDGER */}
             <section>
               <h2 className="font-serif text-xl text-[#5c4033] mb-6 uppercase tracking-widest border-b border-stone-100 pb-2">
@@ -244,7 +345,7 @@ export default function AdminDashboard() {
               </div>
             </section>
 
-            {/* LIVE INVENTORY (RESTORED SECTION) */}
+            {/* LIVE INVENTORY */}
             <section>
               <h2 className="font-serif text-xl text-[#5c4033] mb-6 uppercase tracking-widest border-b border-stone-100 pb-2">
                 Live Inventory & Circle Broadcast
@@ -259,6 +360,7 @@ export default function AdminDashboard() {
                       <img
                         src={p.image_url}
                         className="w-full aspect-square object-cover mb-3 bg-stone-50 grayscale hover:grayscale-0 transition-all duration-500"
+                        alt={p.name}
                       />
                       <h5 className="font-serif text-sm truncate uppercase tracking-wider">
                         {p.name}
@@ -333,7 +435,7 @@ export default function AdminDashboard() {
   );
 }
 
-// --- SUB-COMPONENT: PRODUCT FORM (RESTORED GALLERY) ---
+// --- SUB-COMPONENT: PRODUCT FORM (UNALTERED) ---
 function ProductForm({ existingProduct, onSuccess, onCancel }: any) {
   const [pData, setPData] = useState({
     name: "",
