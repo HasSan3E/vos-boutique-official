@@ -22,6 +22,11 @@ export const metadata: Metadata = {
   title: "VOS Fragrance | Victorious Opulent Scents",
   description:
     "25% Extrait de Parfum collection including Sultanat and Musky Flora.",
+  verification: {
+    other: {
+      "p:domain_verify": ["c7a5b281a9816f98aa6c61db6443ca10"],
+    },
+  },
 };
 
 export default function RootLayout({
